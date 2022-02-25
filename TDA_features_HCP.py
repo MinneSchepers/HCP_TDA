@@ -53,7 +53,19 @@ import TDA_Fernando
 
 
 def import_data(path_dir):
+    """Makes list of all connectivity matrices to include
     
+    
+    Parameters
+    ----------
+    path_dir: path to directory with all connectivity matrices
+        
+    
+    Returns
+    -------
+    data: list containing all names of connectivity matrices
+        
+    """
     data = []
     for filename in os.listdir(path_dir):
         data.append(filename)
@@ -62,24 +74,61 @@ def import_data(path_dir):
 
 
 def import_cmatrix(path_dir, person):
+    """Imports single connectivity matrix
+    
+    
+    Parameters
+    ----------
+    path_dir: path to directory with all connectivity matrices
+    person: a single person from the data-list
+    
+    
+    Returns
+    -------
+    matrix: connectivity matrix as numpy array
+        
+    
+    Notes
+    ----------
+    Checks if the connectivity matrix is square (because some datasets
+    have a header which needs to be excluded), if not, raises exception
+    with error message    
+    
+    """    
     path = path_dir + person
-    cmatrix = np.loadtxt(path, skiprows=1)
+    matrix = np.loadtxt(path, skiprows=1)
 
-    if cmatrix.shape[0] != cmatrix.shape[1]:
+    if matrix.shape[0] != matrix.shape[1]:
         raise Exception(
-            f'Error: imported connectitivy matrix is not square: {cmatrix.shape} \n'
+            f'Error: imported connectitivy matrix is not square: {matrix.shape} \n'
             f'Consider removing the top rows if it contains a header \n'
             f'See function import_cmatrix: adjust skiprows'
             )
 
-    return cmatrix
+    return matrix
 
 
-def make_df(results):
+def make_df(TDA_features):
+    """ Constructs a dataframe with all TDA features for all persons 
+    for exporting
+    
+    
+    Parameters
+    ----------
+    TDA_features: list with all TDA features for one person
+        
+    
+    Returns
+    -------
+    df_export: pandas dataframe with all persons as rows and their 
+               corresponding TDA data in columns
+        
+    """
+    
     df_export = pd.DataFrame()
 
     # Apppend each index of results as row of df
-    for i in results:
+    for i in TDA_features:
         df_export = df_export.append(i, ignore_index=True)
 
     # Bring subject name forward to first column of dataframe
@@ -91,112 +140,260 @@ def make_df(results):
 
 
 def calculate_persistence(matrix):
+    """ Performs filtration (persistent homology) process 
+    
+    
+    Parameters
+    ----------
+    matrix: connectivity matrix as numpy array
+        
+    
+    Returns
+    -------
+    pers: persistence of simplicial complex. 
+          Type:list of pairs(dimension, pair(birth, death))
+    simplex_tree: data structure for representing simplicial complexes
+        
+        
+    """
     rips_complex = gd.RipsComplex(distance_matrix=matrix, max_edge_length=1)
     simplex_tree = rips_complex.create_simplex_tree(max_dimension=nr_dimensions)
-    diag = simplex_tree.persistence()
+    pers = simplex_tree.persistence()
 
-    return rips_complex, diag, simplex_tree
+    return pers, simplex_tree
 
 
-def persistence_per_dim(tr, nr_dimension):
-    # Calculates persistence per dimension.
-    # Outputs list with all persistences per dimension.
+def persistence_per_dim(simplex_tree, nr_dimension):
+    """ Performs filtration (persistent homology) process per dimension
+    
+    
+    Parameters
+    ----------
+    simplex_tree: data structure for representing simplicial complexes
+    nr_dimension: parameter which specifies the number of dimensions to 
+        investigate. E.g. 1, 2 or 3. 
+    
+        
+    Returns
+    -------
+    pers_per_dim: persistence of simplicial complex per dimension. E.g., if 
+        3 dimensions: list of 3 lists of pairs(dimension, pair(birth, death))
+    
+    
+    Notes
+    -------
+    Infinite values likely exist in the filtration process, because some 
+    structures never cease existing. This leads to problems for computing 
+    TDA metrics per dimension. Therefore, infinite values are substituted
+    for the maximum finite values for other structures in the persistence
+    in the same dimension. 
+    
+        
+    """
 
-    diag_per_dim = []
+    pers_per_dim = []
 
     for dimension in range(nr_dimensions):
-        diag = tr.persistence_intervals_in_dimension(dimension)
+        pers = simplex_tree.persistence_intervals_in_dimension(dimension)
 
         # The code below replaces any infinite values with the maximum value
         # from the persistence in dimension 0.
 
         # Find the maximum value which is not infinite
         if dimension == 0:
-            diag = np.where(np.isinf(diag), -1, diag)
-            max_val_dim0 = np.max(diag)
+            pers = np.where(np.isinf(pers), -1, pers)
+            max_val_dim0 = np.max(pers)
 
         # If non-empty array: replace infinite with maximum value
-        if diag.shape != (0,):
-            diag = np.where(np.isinf(diag), -1, diag)
-            diag = np.where(diag == -1, max_val_dim0, diag)
-            diag_per_dim.append(diag)
+        if pers.shape != (0,):
+            pers = np.where(np.isinf(pers), -1, pers)
+            pers = np.where(pers == -1, max_val_dim0, pers)
+            pers_per_dim.append(pers)
 
         # if no topological structures present, append empty array to prevent error
         else:
-            diag_per_dim.append(np.zeros([0, 2]))
+            pers_per_dim.append(np.zeros([0, 2]))
 
-    return diag_per_dim
+    return pers_per_dim
 
 
-def calculate_betti_curves(diag_per_dim):
+def calculate_betti_curves(pers_per_dim):
+    """ Calculates Betti curves per dimension
 
-    # Calculate Betti curves per dimension
+    
+    Parameters
+    ----------
+    pers_per_dim: list of persistence per dimension
+        
+    
+    Returns
+    -------
+    betti_curves: list of Betti curves per dimension
+         
+        
+    """
+
     betti_curves = BettiCurve(resolution=resolution,
-                              sample_range=[0, 1]).transform(diag_per_dim)
+                              sample_range=[0, 1]).transform(pers_per_dim)
 
     return betti_curves
 
 
 def calculate_betti_curves_AUC(betti_curves):
+    """ Calculates area under curve (AUC) for Betti curve per dimension
 
-    # Calculates area under curve for each Betti curve
+    
+    Parameters
+    ----------
+    betti_curves: list of Betti curves
+    resolution: integer for the number of samples to take AUC of 
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+        Betti curve AUC is added as column per dimension
+         
+        
+    """
     for i in range(nr_dimensions):
-        outcomes_to_export[f'bc_AUC_dim{i}'] = metrics.auc(
+        betti_curve_AUC = metrics.auc(
             np.linspace(0, resolution, num=resolution), betti_curves[i])
+        outcomes_to_export[f'bc_AUC_dim{i}'] = betti_curve_AUC
 
     return outcomes_to_export
 
 
-def calculate_persistence_landscape(diag_list):
+def calculate_persistence_landscape(pers_per_dim):
+    """ Calculates persistence landscape per dimension
 
+    
+    Parameters
+    ----------
+    pers_per_dim: list of persistence per dimension
+        
+    
+    Returns
+    -------
+    landscapes: list of persistence landscape per dimension
+         
+        
+    """
+    
     landscapes = Landscape(num_landscapes=1,
-                           resolution=resolution).fit_transform(diag_list)
+                           resolution=resolution).fit_transform(pers_per_dim)
 
     return landscapes
 
 
 def calculate_persistence_landscape_AUC(landscapes):
+    """ Calculates area under curve (AUC) for persistence landscapes
+    per dimension
+
+    
+    Parameters
+    ----------
+    landscapes: list of persistence landscape per dimension
+    resolution: integer for the number of samples to take AUC of 
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+        persistence landscaoe AUC is added as column per dimension
+         
+        
+    """
 
     for i in range(nr_dimensions):
-        outcomes_to_export[f'pl_AUC_dim{i}'] = metrics.auc(
+        landscape_AUC = metrics.auc(
             np.linspace(0, resolution, num=resolution), landscapes[i])
+        outcomes_to_export[f'pl_AUC_dim{i}'] = landscape_AUC
 
     return outcomes_to_export
 
 
-def calculate_TopologicalVector(diag_per_dim):
+def calculate_TopologicalVector(pers_per_dim):
+    """ Calculates topological vector per dimension
 
+    
+    Parameters
+    ----------
+    pers_per_dim: list of persistence per dimension
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+        topological vector is added as column per dimension
+         
+        
+    """
     for i in range(nr_dimensions):
         # If no topolofical components present, set to 0 to prevent errors
-        if diag_per_dim[i].size == 0:
+        if pers_per_dim[i].size == 0:
             outcomes_to_export[f'top_vec_dim{i}'] = 0
 
         else:
-            diag = [diag_per_dim[i]]
-            tv = TopologicalVector(threshold=1).transform(diag)
+            pers = [pers_per_dim[i]]
+            tv = TopologicalVector(threshold=1).transform(pers)
             outcomes_to_export[f'top_vec_dim{i}'] = float(tv)
 
     return outcomes_to_export
 
 
-def calculate_ShannonEntropy(diag_per_dim):
+def calculate_ShannonEntropy(pers_per_dim):
+    """ Calculates Shannon entropy per dimension
 
+    
+    Parameters
+    ----------
+    pers_per_dim: list of persistence per dimension
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+         shannon entropy is added as column per dimension
+         
+        
+    """
     for i in range(nr_dimensions):
         # If no topolofical components present, set to 0 to prevent errors
-        if diag_per_dim[i].size == 0:
+        if pers_per_dim[i].size == 0:
             outcomes_to_export[f'S_entropy_dim{i}'] = 0
 
         else:
-            diag = [diag_per_dim[i]]
-            entropy = Entropy(mode='scalar').fit_transform(diag)
+            pers = [pers_per_dim[i]]
+            entropy = Entropy(mode='scalar').fit_transform(pers)
             outcomes_to_export[f'S_entropy_dim{i}'] = float(entropy)
 
     return outcomes_to_export
 
 
 def calculate_EulerCharaceristic(matrix, person, max_density):
+    """ Calculates Euler characteristic across a density range
 
-    # Calculates outcomes using the function made by Fernando across a density range.
+    
+    Parameters
+    ----------
+    matrix: connectivity matrix as numpy array
+    person: name of person, needed for exporting data
+    max_density: integer which sets the max of the density range for the Euler
+        function
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+         The sum of the Euler characteristic per person, the total number of 
+         cliques and total number of triangles are added as a column
+         per person
+    outcomes_to_plot: dictionary with outcomes to be exported which can be 
+        plotted later using a Jupyter Notebook. 
+    Euler: list of all Euler values across the density range 
+        
+    
+    """
     outcomes = TDA_Fernando.Eulerange_dens(matrix, max_density)
 
     Euler = [i[0] for i in outcomes]
@@ -212,23 +409,46 @@ def calculate_EulerCharaceristic(matrix, person, max_density):
     return outcomes_to_export, outcomes_to_plot, Euler
 
 
-def calculate_Euler_for_plotting(matrix, person, max_density):
-
-    outcomes = TDA_Fernando.Eulerange_dens(matrix, max_density)
-    Euler = [i[0] for i in outcomes]
-
-    outcomes_to_plot[f'Eulerrange_d{max_density}_{person[4:10]}'] = Euler
-
-    return outcomes_to_plot
-
-
 def calculate_curvature(matrix, person, *args, **kwargs):
+    """ Calculates node curvatures at certain density values
+
+    
+    Parameters
+    ----------
+    matrix: connectivity matrix as numpy array
+    person: name of person, needed for exporting data
+    args: list of density values at which the sample the curvature values
+    kwargs: dictionary with density values which are sampled at 
+        (a distance to) a phase transition. This means that each person 
+        will then have a different density value for sampling. 
+        Values: density values. Keys: name of density value. E.g. p1: first
+        phase transition, or p2: second phase transition. 
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+         curvature mean, standard deviation, kurtosis, skewness and entropy
+         are added, either for all nodes, or DMN nodes, or FPN nodes. 
+    outcomes_to_plot: dictionary with outcomes to be exported which can be 
+        plotted later using a Jupyter Notebook. 
+        
+    
+    """
+    
+    # Make dictionary for looping through all nodes, only DMN nodes, 
+    # or only FPN nodes
     all_nodes = range(0, matrix.shape[0])
     dict_to_loop = {"all": all_nodes, "DMN": DMN, "FPN": FPN}
 
+    # loop through fixed density values
     for dens in args:
+        # calculate curvature at density value
         curv = TDA_Fernando.Curv_density(dens, matrix)
+        # export for plotting
         outcomes_to_plot[f'curv_d{dens}_{person[4:10]}'] = curv
+        # calculate curvature outcomes (mean, sandard deviation, kurtosis, 
+        # skewness, entropy) for all nodes, DMN nodes and FPN nodes
         for k, v in dict_to_loop.items():
             outcomes_to_export[f'curv_mean_{k}_{dens}'] = curv[v].mean()
             outcomes_to_export[f'curv_std_{k}_{dens}'] = np.std(curv[v])
@@ -249,22 +469,43 @@ def calculate_curvature(matrix, person, *args, **kwargs):
     return outcomes_to_export, outcomes_to_plot
 
 
-def calculate_curvature_for_plotting(matrix, person, *args):
-    for dens in args:
-        curv = TDA_Fernando.Curv_density(dens, matrix)
-        outcomes_to_plot[f'curv_d{dens}_{person[4:10]}'] = curv
-
-    return outcomes_to_plot
-
-
 def calculate_cliques(matrix, clique_nr, *args, **kwargs):
+    """ Calculates participation for DMN and FPN in n-cliques
+    at chosen density values
+
+    
+    Parameters
+    ----------
+    matrix: connectivity matrix as numpy array
+    clique_nr: integer value which sets the value for n. E.g.: 3 means
+        that participation in 3-cliques/triangles is counted for each node
+        in the network
+    args: list of density values at which the sample the curvature values
+    kwargs: dictionary with density values which are sampled at 
+        (a distance to) a phase transition. This means that each person 
+        will then have a different density value for sampling. 
+        Values: density values. Keys: name of density value. E.g. p1: first
+        phase transition, or p2: second phase transition. 
+    
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+         Participation in n-cliques is measured for DMN and FPN, is exported
+         as the sum of participation in cliques and the entropy
+        
+    
+    """
+    
     for dens in args:
+        # If dens is 0, set outcomes at 0 to prevent errors
         if dens == 0:
             p_cliques_sum_DMN = 0
             p_cliques_sum_FPN = 0
             DMN_clique_entropy = 0
             FPN_clique_entropy = 0
         else:
+            # calculate particpation in cliques
             part_cliques = TDA_Fernando.Participation_in_cliques(dens,
                                                                  matrix,
                                                                  clique_nr,
@@ -278,7 +519,8 @@ def calculate_cliques(matrix, clique_nr, *args, **kwargs):
         outcomes_to_export[f"p{clique_nr}cliques_FPN_ent_{dens}"] = FPN_clique_entropy
         outcomes_to_export[f"p{clique_nr}cliques_DMN_sum_{dens}"] = p_cliques_sum_DMN
         outcomes_to_export[f"p{clique_nr}cliques_FPN_sum_{dens}"] = p_cliques_sum_FPN
-
+    
+    # Deo separately for kwargs to prevent overwriting other variables
     for name, dens in kwargs.items():
         if dens == 0:
             p_cliques_sum_DMN = 0
@@ -304,6 +546,28 @@ def calculate_cliques(matrix, clique_nr, *args, **kwargs):
 
 
 def preprocess_matrix(path_data, person):
+    """ Imports and preprocesses connectivity matrix
+    
+    
+    Parameters
+    ----------
+    path_data: path to location of all connectivity matrices
+    person: name of current person from data
+    
+    Returns
+    -------
+    matrix: preprocessed matrix as numpy array
+     
+    
+    Notes
+    -------
+    If still present, any subcortical areas are deleted. Matrix is then 
+    absolutized and converted to distance matrix, and diagonal filled with 1. 
+    And short quality check: matrix with NaN values are printed. 
+    
+    """   
+    
+    # Import connectivity matrix
     matrix = import_cmatrix(path_data, person)
 
     # Remove subcortical regions
@@ -327,6 +591,23 @@ def preprocess_matrix(path_data, person):
 
 
 def import_subnetworks(path_regions, path_region_names):
+    """ Imports subnetworks
+    
+    
+    Parameters
+    ----------
+    path_regions: path to file which contains all region names in the brain
+    path_region_names: path to file which contains all names of subnetworks
+        to which each region belongs
+    
+    Returns
+    -------
+    FPN: list of indexes of all regions which are part of FPN
+    DMN: list of indexes of all regions which are part of DMN
+    subcortical: list of indexes of all regions which are subcortical. 
+        Necessary for excluding any subcortical regions from analysis. 
+    
+    """ 
     regions = pd.read_csv(path_regions, header=None)
     names = pd.read_csv(path_region_names, header=None)
 
@@ -337,39 +618,75 @@ def import_subnetworks(path_regions, path_region_names):
     FPN = list(subnetworks[subnetworks['subnetwork'] == 'FP'].index.values)
     DMN = list(subnetworks[subnetworks['subnetwork'] == 'DMN'].index.values)
     subcortical = list(subnetworks[subnetworks['subnetwork'] == 'SC'].index.values)
-    FPN_names = list(subnetworks['region'][FPN])
-    DMN_names = list(subnetworks['region'][DMN])
 
-    all_node_names = list(subnetworks['subnetwork'])
-
-    return FPN, DMN, subcortical, FPN_names, DMN_names, all_node_names
+    return FPN, DMN, subcortical
 
 
-def export_plotting_data(results):
+def export_plotting_data(plotting_data):
+    """ Exports TDA features for plotting
+    
+    
+    Parameters
+    ----------
+    plotting_data: list with all numpy arrays for plotting
+    
+    
+    Returns
+    -------
+    Exports data per feature as a npz file, containing all numpy arrays for 
+    all persons for the same fature. 
+     
+    
+    Notes
+    -------
+    Can be plotted using a Jupyter Notebook, see GitHub. 
+    
+    
+    """   
+    # Merge all data from all participants into one dictionary
     merged = {}
     for i in results:
         merged.update(i)
 
+    # Make a list of all feature_names 
     feature_names = []
     for i in results[0].keys():
         elements = i.split("_")
         feature = str(f"{elements[0]}_{elements[1]}")
         feature_names.append(feature)
 
+    # Save all data from one feature for all paritcipants as a new dictionary
     for feature in feature_names:
-
-        all_keys = [key for key, value in merged.items() if feature in key]
-
+        all_keys = [key for key,value in merged.items() if feature in key]
         new_dict = {}
         for i in all_keys:
             new_dict[i] = merged[i]
-
+        
+        # Export dictionary as npz file 
         savez_compressed(f'{path_plots}To_Plot_{feature}.npz', **new_dict)
 
 
 def calculate_Euler_peaks(Euler):
-    # Calculates the location of the Euler peaks,
-    # for the first and second peak/phase transition
+    """ Calculates the position of the Euler peaks / phase transitions
+    
+    
+    Parameters
+    ----------
+    Euler: list with all Euler values for each density in density range
+        
+    
+    Returns
+    -------
+    peaks: list of locations of Euler peaks
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+        Location of phase transition 1 and 2 (if present) is added
+             
+    Notes
+    -------
+    Only calculates up to the second phase transition. 
+    
+    """
+
     peaks = find_peaks(-np.log(np.abs(Euler)), prominence=1)[0]
     outcomes_to_export['Phase_transition_1'] = float(peaks[0])
     # If only one peak present, make phase_transition 2 NaN value
@@ -383,9 +700,34 @@ def calculate_Euler_peaks(Euler):
 
 
 def get_phase_transition_peaks(peaks):
+    """ Calculates values of densities located around phase transition
 
+    
+    Parameters
+    ----------
+    peaks: list of locations of Euler peaks
+    
+    
+    Returns
+    -------
+    all_peaks: dictionary with density values at fixed distances around 
+        phase transitions. 
+        
+        
+    Notes
+    -------
+    These distances to phase transitions can be set at different values,
+    depending on how this affects performance (i.e. correlation with 
+    cognition). Because during exploratory analyses we found that 
+    TDA metrics which are sampled at phase transitions (e.g. curvature 
+    or participation in cliques) perform better when sampled not at the 
+    phase transition, but slightly around it. 
+    
+        
+    """
     all_peaks = {}
-
+    
+    # If second phase transition also present: 
     if len(peaks) > 1:
         peak1_low = round(peaks[0]/1000 - 0.0015, 5)
         peak1_high = round(peaks[0]/1000 + 0.0015, 5)
@@ -396,7 +738,8 @@ def get_phase_transition_peaks(peaks):
         all_peaks['p1high'] = peak1_high
         all_peaks['p2low'] = peak2_low
         all_peaks['p2high'] = peak2_high
-
+    
+    # If only first phase transition present: 
     else:
         peak1_low = round(float(peaks)/1000 - 0.0015, 5)
         peak1_high = round(float(peaks)/1000 + 0.0015, 5)
@@ -410,46 +753,77 @@ def get_phase_transition_peaks(peaks):
 
 
 def calculate_features(person):
+    """ Combines all functions above to calculate TDA features for each person
+    
+    
+    Parameters
+    ----------
+    person: name of person from data
+        
+    
+    Returns
+    -------
+    outcomes_to_export: dictionary with all TDA outcomes per person. 
+        Location of phase transition 1 and 2 (if present) is added
+    outcomes_to_plot: dictionary with outcomes to be exported which can be 
+        plotted later using a Jupyter Notebook.      
+    
+    
+    Notes
+    -------
+    
+    
+    """
+    # Define outcomes_to_export for saving variables
     global outcomes_to_export
     outcomes_to_export = {}
 
+    # Import and preproces connectivity matrix
     matrix = preprocess_matrix(path_data, person)
 
-    rips_complex, diag, simplex_tree = calculate_persistence(matrix)
-    diag_per_dim = persistence_per_dim(simplex_tree, nr_dimensions)
-
-    betti_curves = calculate_betti_curves(diag_per_dim)
+    # Perform persistence and persistence per dimension
+    pers, simplex_tree = calculate_persistence(matrix)
+    pers_per_dim = persistence_per_dim(simplex_tree, nr_dimensions)
+    
+    # Calculate Betti curves and save area under curve
+    betti_curves = calculate_betti_curves(pers_per_dim)
     outcomes_to_export = calculate_betti_curves_AUC(betti_curves)
-
-    landscapes = calculate_persistence_landscape(diag_per_dim)
+    
+    # Calculate persistence landscapes and save area under curve
+    landscapes = calculate_persistence_landscape(pers_per_dim)
     outcomes_to_export = calculate_persistence_landscape_AUC(landscapes)
+    
+    # Calculate and save topological vector and Shannon entropy
+    outcomes_to_export = calculate_TopologicalVector(pers_per_dim)
+    outcomes_to_export = calculate_ShannonEntropy(pers_per_dim)
 
-    outcomes_to_export = calculate_TopologicalVector(diag_per_dim)
-    outcomes_to_export = calculate_ShannonEntropy(diag_per_dim)
-
+    # Calculate Euler characteristic
     (outcomes_to_export, outcomes_to_plot, Euler
      ) = calculate_EulerCharaceristic(matrix, person,
                                       max_density=density_Euler)
 
+    # Calculate phase transitions and densities located around transitions                                     
     peaks, outcomes_to_export = calculate_Euler_peaks(Euler)
     pt_peak = get_phase_transition_peaks(peaks)
 
+    # Calculate and save curvatures
     (outcomes_to_export, outcomes_to_plot
      ) = calculate_curvature(matrix, person,
                              *curvatures_to_plot,
                              p1low=pt_peak['p1low'],
                              p1high=pt_peak['p1high'])
-
+    # Calculate and save participation in 3-cliques
     outcomes_to_export = calculate_cliques(matrix, 3,
                                            p1low=pt_peak['p1low'],
                                            p1high=pt_peak['p1high'],
                                            p2low=pt_peak['p2low'],
                                            p2high=pt_peak['p2high'])
-
+    # Calculate and save participation in 4-cliques
     outcomes_to_export = calculate_cliques(matrix, 4,
                                            p2low=pt_peak['p2low'],
                                            p2high=pt_peak['p2high'])
 
+    # Add name Subject to dictionary to export
     outcomes_to_export['Subject'] = person[:-4]
 
     return outcomes_to_export, outcomes_to_plot
@@ -459,6 +833,8 @@ def calculate_features(person):
 # Run Functions    #
 ####################
 
+# Ignore divide by infinity error 
+np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/HCP_REST1_corr_mat/'
@@ -469,19 +845,19 @@ path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurf
 path_females = '/data/KNW/KNW-stage/m.schepers/HCP/Cog_data/females_train.csv'
 
 # Set variables
-np.seterr(divide='ignore', invalid='ignore')
-nr_dimensions = 2
-resolution = 100
-curvatures_to_plot = [0.005, 0.01, 0.02, 0.05]
-density_Euler = 100
-n_workers = 10
+nr_dimensions = 2 # number of dimensions in filtration process to analyze
+resolution = 100 # resolution for calculating area under curve
+curvatures_to_plot = [0.005, 0.01, 0.02, 0.05] # fixed densities for plotting
+# and calculating curvatures
+density_Euler = 100 # the maximum density of density range to calculate Euler
+n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
-(FPN, DMN, subcortical, FPN_names, DMN_names, all_node_names
- ) = import_subnetworks(path_regions, path_region_names)
+FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
 data = import_data(path_data)
+# Only select females in this case
 females = pd.read_csv(path_females)
 female_subjects = females['subject']
 female_subjects = [i + '.csv' for i in female_subjects]
