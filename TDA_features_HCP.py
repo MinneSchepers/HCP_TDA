@@ -27,20 +27,21 @@ __status__ = "Production" ### Production = still being developed. Else: Conclude
 import os
 
 # Third party imports ### (Put here third-party libraries e.g. pandas, numpy)
-import gudhi as gd
-import numpy as np
-import pandas as pd
-from sklearn import metrics
-from gudhi.representations import Landscape
-from gudhi.representations import BettiCurve
-from gudhi.representations import TopologicalVector
-from gudhi.representations import Entropy
-from scipy.signal import find_peaks
-from scipy.stats import kurtosis, skew
-from scipy.stats import entropy
-from mpire import WorkerPool
-from numpy import savez_compressed
-import tqdm
+import gudhi as gd # version 3.3.0
+from gudhi.representations import Landscape # version 3.3.0
+from gudhi.representations import BettiCurve # version 3.3.0
+from gudhi.representations import TopologicalVector # version 3.3.0
+from gudhi.representations import Entropy # version 3.3.0
+from mpire import WorkerPool # version 2.3.3
+import numpy as np # version 1.20.3
+from numpy import savez_compressed # version 1.20.3
+import pandas as pd # version 1.4.1
+from scipy.signal import find_peaks # version 1.6.2
+from scipy.stats import kurtosis # version 1.6.2
+from scipy.stats import skew # version 1.6.2
+from scipy.stats import entropy # version 1.6.2
+from sklearn import metrics # version 1.0.2
+import tqdm # version 4.55.0
 
 # Internal imports ### (Put here imports that are related to internal codes from the lab)
 import TDA_Fernando
@@ -52,6 +53,7 @@ import TDA_Fernando
 
 
 def import_data(path_dir):
+    
     data = []
     for filename in os.listdir(path_dir):
         data.append(filename)
@@ -110,13 +112,11 @@ def persistence_per_dim(tr, nr_dimension):
 
         # Find the maximum value which is not infinite
         if dimension == 0:
-
             diag = np.where(np.isinf(diag), -1, diag)
             max_val_dim0 = np.max(diag)
 
         # If non-empty array: replace infinite with maximum value
         if diag.shape != (0,):
-
             diag = np.where(np.isinf(diag), -1, diag)
             diag = np.where(diag == -1, max_val_dim0, diag)
             diag_per_dim.append(diag)
@@ -167,7 +167,6 @@ def calculate_persistence_landscape_AUC(landscapes):
 def calculate_TopologicalVector(diag_per_dim):
 
     for i in range(nr_dimensions):
-
         # If no topolofical components present, set to 0 to prevent errors
         if diag_per_dim[i].size == 0:
             outcomes_to_export[f'top_vec_dim{i}'] = 0
@@ -183,7 +182,6 @@ def calculate_TopologicalVector(diag_per_dim):
 def calculate_ShannonEntropy(diag_per_dim):
 
     for i in range(nr_dimensions):
-
         # If no topolofical components present, set to 0 to prevent errors
         if diag_per_dim[i].size == 0:
             outcomes_to_export[f'S_entropy_dim{i}'] = 0
