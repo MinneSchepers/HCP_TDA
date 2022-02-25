@@ -1,20 +1,21 @@
 # HCP_TDA
- Contains code for analyzing HCP data
 
+This repository contains code for topological analysis of HCP data. This readme contains, step by step, the codes we used for our project. We focused on the HCP aging database. 
 
-# Create file for cognitive/behavioral data
-Combine all behavioral data files from the HCP project into a single behavioral data file:
-Files:
+# 1 - Create file for cognitive/behavioral data
+We combined all behavioral data files from the HCP project into a single behavioral data file:
+
 - Make_cog_file_HCP.ipynb
 
-# Split data into exploration/training set and testing set.
-Splitting is done based on age and on years of education. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann Whitney U test.
+# 2 - Split data into exploration/training set and testing set.
+We created two groups, training and validation sets. We performed feature selection in the training data set, and tested our findings in the validation dataset. We splitted the database based on age and on years of education. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann Whitney U test.
+
 Files:
 - Split_HCP_data_Females.ipynb
 - Split_HCP_data_Males.ipynb
 
-# fMRI-timeseries to 4 types of correlation matrices:
-1. Correlation matrices
+# 3 - From the fMRI-timeseriesm we created 4 types of functional connectivity matrices:
+1. Correlation matrices - i.e., Pearson connectivity matrices: 
 o Calculate_con_matrices.py
 2. Filtered correlation matrices.
 Is created in three steps:
