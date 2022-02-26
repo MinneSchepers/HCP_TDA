@@ -633,8 +633,13 @@ def export_plotting_data(plotting_data):
     
     Returns
     -------
-    Exports data per feature as a npz file, containing all numpy arrays for 
-    all persons for the same fature. 
+    Exports data per feature to plot as a npz file (multiple numpy arrays 
+    zipped into a single file). 
+    E.g. a file called curv_d0.005.npz, containing all numpy arrays
+    with curvatures at density 0.005 for all persons. 
+    These npz files can be unpacked as a dictionary, so keys are the names
+    of the persons, e.g. curv_d0.005_person1, while the value is the 
+    numpy array with curvatures. 
      
     
     Notes
@@ -645,26 +650,29 @@ def export_plotting_data(plotting_data):
     """   
     # Merge all data from all participants into one dictionary
     merged = {}
-    for i in results:
+    for i in plotting_data:
         merged.update(i)
 
-    # Make a list of all feature_names 
+    # Make a list of all feature_names to enable grouping and exporting 
+    # per feature
     feature_names = []
-    for i in results[0].keys():
+    for i in plotting_data[0].keys():
         elements = i.split("_")
         feature = str(f"{elements[0]}_{elements[1]}")
         feature_names.append(feature)
-
-    # Save all data from one feature for all paritcipants as a new dictionary
+        
+    # Per feature, make a new dictionary with only data from that feature
     for feature in feature_names:
+        # Make list with all keys to include in new dictionary. For example: 
+        # for curv_d0.05, include curv_d0.005_person1 and curv_d0.05_person2
         all_keys = [key for key,value in merged.items() if feature in key]
+        # Include data from merged with the keys selected above
         new_dict = {}
         for i in all_keys:
             new_dict[i] = merged[i]
-        
         # Export dictionary as npz file 
         savez_compressed(f'{path_plots}To_Plot_{feature}.npz', **new_dict)
-
+    
 
 def calculate_Euler_peaks(Euler):
     """ Calculates the position of the Euler peaks / phase transitions
@@ -766,7 +774,11 @@ def calculate_features(person):
     outcomes_to_export: dictionary with all TDA outcomes per person. 
         Location of phase transition 1 and 2 (if present) is added
     outcomes_to_plot: dictionary with outcomes to be exported which can be 
-        plotted later using a Jupyter Notebook.      
+        plotted later using a Jupyter Notebook.     
+        Format: list of dictionaries. For each person a dictionary is 
+        generated. Key is names of variables to plot + name person, value 
+        is numpy array (in the case of curvatures) or list (in the case
+        of Euler range)
     
     
     Notes
@@ -775,8 +787,8 @@ def calculate_features(person):
     
     """
     # Define outcomes_to_export for saving variables
-    global outcomes_to_export
-    outcomes_to_export = {}
+    # global outcomes_to_export
+    # outcomes_to_export = {}
 
     # Import and preproces connectivity matrix
     matrix = preprocess_matrix(path_data, person)
@@ -838,18 +850,20 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/HCP_REST1_corr_mat/'
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_features_HCP_Females_Train.csv'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/'
+path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_100nonglob_Train.csv'
+path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Train_100nonglob'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
-path_females = '/data/KNW/KNW-stage/m.schepers/HCP/Cog_data/females_train.csv'
+# path_females = '/data/KNW/KNW-stage/m.schepers/HCP/Cog_data/females_train.csv'
 
 # Set variables
 nr_dimensions = 2 # number of dimensions in filtration process to analyze
 resolution = 100 # resolution for calculating area under curve
 curvatures_to_plot = [0.005, 0.01, 0.02, 0.05] # fixed densities for plotting
+# curvatures_to_plot = [0.005, 0.01]
 # and calculating curvatures
 density_Euler = 100 # the maximum density of density range to calculate Euler
+# density_Euler = 10
 n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
@@ -857,12 +871,13 @@ FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
 data = import_data(path_data)
+data = data[0:100]
 # Only select females in this case
-females = pd.read_csv(path_females)
-female_subjects = females['subject']
-female_subjects = [i + '.csv' for i in female_subjects]
-only_females = [i for i in data if i in female_subjects]
-data = only_females
+# females = pd.read_csv(path_females)
+# female_subjects = females['subject']
+# female_subjects = [i + '.csv' for i in female_subjects]
+# only_females = [i for i in data if i in female_subjects]
+# data = only_females
 
 # Create variables for exporting
 outcomes_to_export = {}
@@ -875,7 +890,7 @@ print("--- Generating features ---", flush=True)
 # Run code, tqdm will show progress bar
 pool = WorkerPool(n_jobs=n_workers)
 results = list(tqdm.tqdm(pool.imap_unordered(calculate_features, data),
-                         total=len(data)))
+                          total=len(data)))
 
 # Export plotting data
 plotting_data = [i[1] for i in results]
