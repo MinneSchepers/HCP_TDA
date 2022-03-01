@@ -35,11 +35,6 @@ To be created
 Input is correlation matrices, as well as files for the region names and subnetworks. Output is csv file with all TDA features for all persons, and npz files for numpy arrays, which can then be plotted afterwards using the HCP_Data_checking_plotting.ipynb file.
 Files:
 - TDA_features_HCP.py
-- TDA_features_HCP_MI_females.py
-- TDA_features_HCP_MI_males.py
-- TDA_features_HCP_pvalued.py
-- TDA_features_HCP_pvalued_Females.py
-- TDA_features_HCP_pvalued_Males.py
 
 # Create dataframes with TDA and cognitive data
 Files:
