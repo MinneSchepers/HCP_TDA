@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""A short description or title.
+"""Calculate Topological Data Analysis (TDA) features
 
-   Longer description.
+   Pythons script for calculating TDA features from connectivity matrices
+   derived from fMRI timeseries. 
+   Makes use of GUDHI Python TDA package and code by Fernando Santos. 
 
 """
 

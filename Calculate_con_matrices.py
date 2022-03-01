@@ -1,20 +1,39 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon May 10 11:06:18 2021
+"""Calculate connectivity matrices
 
-@author: Minne Schepers
-
-To convert timeseries to connectivity matrices
-    
+   To convert timeseries to connectivity matrices
 
 """
 
+__author__ = "Minne Schepers"
+__contact__ = "minneschepers@gmail.com"
+__date__ = "10/05/2021"   ### Date it was created
+__status__ = "Production" ### Production = still being developed. Else: Concluded/Finished.
+
+####################
+# Review History   #
+####################
+
+# Reviewed by Name Date ### e.g. Eduarda Centeno 20200909
+
+
+####################
+# Libraries        #
+####################
+
+# Standard imports  ### (Put here built-in libraries - https://docs.python.org/3/library/)
 import os
-import numpy as np
-import pandas as pd
-from mpire import WorkerPool
-import tqdm 
 
+# Third party imports ### (Put here third-party libraries e.g. pandas, numpy)
+from mpire import WorkerPool # version 2.3.3
+import numpy as np # version 1.20.3
+import pandas as pd # version 1.4.1
+import tqdm # version 4.55.0
+
+
+####################
+# Import data      #
+####################
 
 # Path with all participant names
 path = "/data/public_data/HCPAgingDerivatives"
@@ -25,16 +44,38 @@ for file in os.listdir(path):
     if file.startswith("HCA") and not file.startswith("HCA_"):
         names.append(file)
 
-# Delete participants from list
+# Delete participants if necessary
 # 'HCA8239378': no timeseries file available in folder
 to_remove = ['HCA8239378']
 names.remove(*to_remove)
 print(len(names))
 
 
+####################
+# Functions        #
+####################
+
 # Define function to calculate and export correlation matrix
 def calculate_corr_mat(name):
+    """ Calculates correlation matrix from timeseries for one person
+    
+    
+    Parameters
+    ----------
+    name: name of participant. Is used to locate the timeseries and also to 
+        name the correlation matrix file csv file which is exported. 
         
+    
+    Returns
+    -------
+    Exports output_matrix. Correlation matrix. Is absolutized, diagonal is 
+    filled with np.nan, z-scored and rescaled. 
+    
+    Notes
+    -------
+    
+    
+    """
     # Path to look for timeseries
     path_2 = f"/data/public_data/HCPAgingDerivatives/{name}/V1/rfMRI_REST1/GlasserFreesurfer/{name}_V1_rfMRI_REST1_Atlas_MSMAll_hp0_clean_GlasserFreesurfer.txt"
 
@@ -55,6 +96,10 @@ def calculate_corr_mat(name):
     output_matrix.to_csv(f"/data/KNW/KNW-stage/m.schepers/HCP/HCP_REST1_corr_mat/{name}.csv",
                           index=False, sep=' ', na_rep = 'NaN')
 
+
+####################
+# Run Functions    #
+####################
 
 # Perform the function above pooled with n_workers
 n_workers=10
