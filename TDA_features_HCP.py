@@ -850,11 +850,11 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/HCP_REST1_corr_mat/'
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_100nonglob_Train.csv'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Train_100nonglob'
+path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_all_nonglob_Train.csv'
+path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Train_all_nonglob'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
-# path_females = '/data/KNW/KNW-stage/m.schepers/HCP/Cog_data/females_train.csv'
+path_train = '/data/KNW/KNW-stage/m.schepers/HCP/GitHub/All_exp.csv'
 
 # Set variables
 nr_dimensions = 2 # number of dimensions in filtration process to analyze
@@ -871,13 +871,13 @@ FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
 data = import_data(path_data)
-data = data[0:100]
+# data = data[0:100]
 # Only select females in this case
-# females = pd.read_csv(path_females)
-# female_subjects = females['subject']
-# female_subjects = [i + '.csv' for i in female_subjects]
-# only_females = [i for i in data if i in female_subjects]
-# data = only_females
+train = pd.read_csv(path_train)
+train_subjects = train['subject']
+train_subjects = [i + '.csv' for i in train_subjects]
+only_train = [i for i in data if i in train_subjects]
+data = only_train
 
 # Create variables for exporting
 outcomes_to_export = {}
