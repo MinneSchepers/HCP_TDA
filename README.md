@@ -16,17 +16,18 @@ Files:
 
 # 3 - From the fMRI-timeseriesm we created 4 types of functional connectivity matrices:
 1. Correlation matrices - i.e., Pearson connectivity matrices: 
-o Calculate_con_matrices.py
-2. Filtered correlation matrices.
+o Connectivity_matrices.py
+2. Filtered pvalued correlation matrices.
 Is created in three steps:
-- Calculate correlation matrices (is bit different than in calculate_con_matrices.py, so is a necessary step) Calculate_con_matrices_pvalued_corrmats.py
+- Calculate correlation matrices (is bit different than in Connectivity_matrices.py, so is a necessary step) 
+Connectivity_matrices_pvalued.py
 - Calculate 100 randomized correlation matrices for comparisons:
-Calculate_con_matrices_pvalued.py
+Connectivity_matrices_pvalued_random.py
 - Create filtered correlation matrices with only significant links:
-Calculate_con_matrices_pvalued_filtered.py
+Connectivity_matrices_pvalued_filtered.py
 3. Mutual information matrices:
 Creates correlation matrices with mutual information scores
-Calculate_con_matrices_MI.py
+Connectivity_matrices_MI.py
 4. Filtered mutual information matrices
 Creates mutual information matrices with only significant links
 To be created
