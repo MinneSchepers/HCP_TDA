@@ -57,7 +57,7 @@ print(len(names))
 
 # Define function to calculate and export correlation matrix
 def calculate_corr_mat(name):
-    """ Calculates correlation matrix from timeseries for one person
+    """ Calculates correlation matrix from timeseries for one subject
     
     
     Parameters
@@ -92,8 +92,9 @@ def calculate_corr_mat(name):
     rescaled = (zmatrix - np.nanmin(zmatrix))/(np.nanmax(zmatrix)- np.nanmin(zmatrix))
     
     # Export matrix as pandas dataframe
-    output_matrix = pd.DataFrame(rescaled)    
-    output_matrix.to_csv(f"/data/KNW/KNW-stage/m.schepers/HCP/HCP_REST1_corr_mat/{name}.csv",
+    output_matrix = pd.DataFrame(rescaled)
+ 
+    output_matrix.to_csv(f"/data/KNW/KNW-stage/m.schepers/HCP/Connectivity_Matrices/HCP_REST1_conn_mat/{name}.csv",
                           index=False, sep=' ', na_rep = 'NaN')
 
 
