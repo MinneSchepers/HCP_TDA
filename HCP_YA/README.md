@@ -5,14 +5,15 @@ This repository contains code for topological analysis of HCP data. This readme 
 # 1 - Create file for cognitive/behavioral data
 We combined all behavioral data files from the HCP project into a single behavioral data file:
 
-- Make_cog_file_HCP.ipynb
+- Organizing_Annot_Data.ipynb
 
 # 2 - Split data into exploration/training set and testing set.
-We created two groups, training and validation sets. We performed feature selection in the training data set, and tested our findings in the validation dataset. We splitted the database based on age and on years of education. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann Whitney U test.
+We created two groups, training and validation sets for Male and Female individuals. Later, we will perform feature selection in the training data set, and we will test our findings in the validation dataset. We splitted the database based on Global Cognition for the HCP Young Adult Dataset. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann Whitney U test and KS tests.
 
 Files:
-- Split_HCP_data_Females.ipynb
-- Split_HCP_data_Males.ipynb
+- Split_HCP_YA_Data_Males_and_Females.ipynb
+
+### Fernando Santos STOPED HERE
 
 # 3 - From the fMRI-timeseriesm we created 4 types of functional connectivity matrices:
 1. Correlation matrices - i.e., Pearson connectivity matrices: 
