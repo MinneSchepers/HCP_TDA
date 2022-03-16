@@ -829,16 +829,16 @@ path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_trai
 path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all_test'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
-path_train = '/data/KNW/KNW-stage/m.schepers/HCP/GitHub/All_exp.csv'
+path_train = '/data/KNW/KNW-stage/m.schepers/HCP/GitHub/All_exp_MI.csv'
 
 # Set variables
 nr_dimensions = 2 # number of dimensions in filtration process to analyze
 resolution = 100 # resolution for calculating area under curve
-curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plotting
+curvatures_to_plot = [0.0005, 0.001, 0.01] # fixed densities for plotting
 # curvatures_to_plot = [0.005, 0.01]
 # and calculating curvatures
 # density_Euler = 100 # the maximum density of density range to calculate Euler
-density_Euler = 100
+density_Euler = 50
 n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
