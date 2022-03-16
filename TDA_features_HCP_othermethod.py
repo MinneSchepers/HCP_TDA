@@ -219,7 +219,7 @@ def persistence_per_dim(simplex_tree, nr_dimension):
     return pers_per_dim
 
 
-def calculate_betti_curves(pers_per_dim):
+def calculate_betti_curves(pers_per_dim, outcomes_to_export):
     """ Calculates Betti curves per dimension
 
     
@@ -253,7 +253,7 @@ def calculate_betti_curves(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_persistence_landscape(pers_per_dim):
+def calculate_persistence_landscape(pers_per_dim, outcomes_to_export):
     """ Calculates persistence landscape per dimension
 
     
@@ -282,7 +282,7 @@ def calculate_persistence_landscape(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_TopologicalVector(pers_per_dim):
+def calculate_TopologicalVector(pers_per_dim, outcomes_to_export):
     """ Calculates topological vector per dimension
 
     
@@ -310,7 +310,7 @@ def calculate_TopologicalVector(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_ShannonEntropy(pers_per_dim):
+def calculate_ShannonEntropy(pers_per_dim, outcomes_to_export):
     """ Calculates Shannon entropy per dimension
 
     
@@ -339,7 +339,8 @@ def calculate_ShannonEntropy(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_EulerCharaceristic(matrix, subject, max_density):
+def calculate_EulerCharaceristic(matrix, subject, max_density, 
+                                 outcomes_to_export, outcomes_to_plot):
     """ Calculates Euler characteristic across a density range
 
     
@@ -378,7 +379,8 @@ def calculate_EulerCharaceristic(matrix, subject, max_density):
     return outcomes_to_export, outcomes_to_plot, Euler
 
 
-def calculate_curvature(matrix, subject, *args, **kwargs):
+def calculate_curvature(matrix, subject, outcomes_to_export, outcomes_to_plot, 
+                        *args, **kwargs, ):
     """ Calculates node curvatures at certain density values
 
     
@@ -438,7 +440,7 @@ def calculate_curvature(matrix, subject, *args, **kwargs):
     return outcomes_to_export, outcomes_to_plot
 
 
-def calculate_cliques(matrix, clique_nr, *args, **kwargs):
+def calculate_cliques(matrix, clique_nr,  outcomes_to_export, *args, **kwargs):
     """ Calculates participation for DMN and FPN in n-cliques
     at chosen density values
 
@@ -647,7 +649,7 @@ def export_plotting_data(plotting_data):
         savez_compressed(f'{path_plots}To_Plot_{feature}.npz', **new_dict)
     
 
-def calculate_Euler_peaks(Euler):
+def calculate_Euler_peaks(Euler, outcomes_to_export):
     """ Calculates the position of the Euler peaks / phase transitions
     
     
@@ -776,8 +778,9 @@ def calculate_features(subject):
     """
     # Define outcomes_to_export for saving variables
     # global outcomes_to_export
-    # outcomes_to_export = {}
-    # outcomes_to_export = {}
+    outcomes_to_export = {}
+    outcomes_to_plot = {}
+    outcomes_to_export['Subject'] = subject[:-4] 
 
     # Import and preproces connectivity matrix
     matrix, dist_matrix = preprocess_matrix(path_data, subject)
@@ -787,31 +790,29 @@ def calculate_features(subject):
     pers_per_dim = persistence_per_dim(simplex_tree, nr_dimensions)
     
     # Calculate Gudhi TDA outcomes
-    outcomes_to_export = calculate_betti_curves(pers_per_dim)
-    outcomes_to_export = calculate_persistence_landscape(pers_per_dim)
-    outcomes_to_export = calculate_TopologicalVector(pers_per_dim)
-    outcomes_to_export = calculate_ShannonEntropy(pers_per_dim)
+    outcomes_to_export = calculate_betti_curves(pers_per_dim, outcomes_to_export)
+    outcomes_to_export = calculate_persistence_landscape(pers_per_dim, outcomes_to_export)
+    outcomes_to_export = calculate_TopologicalVector(pers_per_dim, outcomes_to_export)
+    outcomes_to_export = calculate_ShannonEntropy(pers_per_dim, outcomes_to_export)
 
-    # Calculate Euler characteristic
+    # # Calculate Euler characteristic
     (outcomes_to_export, outcomes_to_plot, Euler
-      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler)
+      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, outcomes_to_export, outcomes_to_plot)
 
-    # Calculate phase transitions and densities located around transitions                                     
-    peaks, outcomes_to_export = calculate_Euler_peaks(Euler)
+    # # Calculate phase transitions and densities located around transitions                                     
+    peaks, outcomes_to_export = calculate_Euler_peaks(Euler, outcomes_to_export)
     pt_peak = get_phase_transition_peaks(peaks)
     
-    # Calculate and save curvatures
+    # # Calculate and save curvatures
     (outcomes_to_export, outcomes_to_plot
-      ) = calculate_curvature(matrix, subject, *curvatures_to_plot, **pt_peak)
+      ) = calculate_curvature(matrix, subject, outcomes_to_export, 
+                              outcomes_to_plot, *curvatures_to_plot, **pt_peak)
+                              
+    # # Calculate and save participation in 3-cliques
+    outcomes_to_export = calculate_cliques(matrix, 3, outcomes_to_export, **pt_peak)
+    # # Calculate and save participation in 4-cliques
+    outcomes_to_export = calculate_cliques(matrix, 4, outcomes_to_export, **pt_peak)
     
-    # Calculate and save participation in 3-cliques
-    outcomes_to_export = calculate_cliques(matrix, 3, **pt_peak)
-    # Calculate and save participation in 4-cliques
-    outcomes_to_export = calculate_cliques(matrix, 4, **pt_peak)
-    
-    # Add name Subject to dictionary to export
-    outcomes_to_export['Subject'] = subject[:-4] 
-
     return outcomes_to_export, outcomes_to_plot
 
 
@@ -824,8 +825,8 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/Connectivity_Matrices/HCP_REST1_conn_mat/'
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_training_all.csv'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all'
+path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_training_all_othermethod.csv'
+path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all_test'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
 path_train = '/data/KNW/KNW-stage/m.schepers/HCP/GitHub/All_exp.csv'
@@ -845,7 +846,7 @@ FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
 data = import_data(path_data)
-# data = data[0:5]
+# data = data[0:2]
 
 train = pd.read_csv(path_train)
 train_subjects = train['subject']
@@ -854,8 +855,8 @@ only_train = [i for i in data if i in train_subjects]
 data = only_train
 
 # Create variables for exporting
-outcomes_to_export = {}
-outcomes_to_plot = {}
+# outcomes_to_export = {}
+# outcomes_to_plot = {}
 
 # Print basic statistics for keeping progress
 print(f'N = {len(data)}, n_workers = {n_workers}', flush=True)
