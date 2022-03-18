@@ -824,8 +824,8 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/Connectivity_Matrices/HCP_REST1_conn_mat/'
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_training_all.csv'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all'
+path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_training_20_originalmethod.csv'
+path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all_test'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
 path_train = '/data/KNW/KNW-stage/m.schepers/HCP/GitHub/All_exp_MI.csv'
@@ -846,6 +846,12 @@ FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 # Import data
 data = import_data(path_data)
 # data = data[0:5]
+data = ['HCA9546594.csv', 'HCA7552478.csv', 'HCA6119257.csv', 'HCA9044570.csv',
+        'HCA7907287.csv', 'HCA8623581.csv', 'HCA7056264.csv', 'HCA6606571.csv',
+        'HCA7502059.csv', 'HCA8657598.csv', 'HCA7764594.csv', 'HCA7268178.csv',
+        'HCA9688312.csv', 'HCA6937998.csv', 'HCA6120646.csv', 'HCA9099999.csv',
+        'HCA8126971.csv', 'HCA6750477.csv', 'HCA6474782.csv', 'HCA6668391.csv']
+
 
 train = pd.read_csv(path_train)
 train_subjects = train['Subject']
