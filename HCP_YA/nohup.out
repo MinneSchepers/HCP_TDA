@@ -1,0 +1,34 @@
+nohup: pyhton3: No such file or directory
+nohup: pyhton3: No such file or directory
+nohup: YA_Calculate_con_matrices_pvalued_filtered.py: No such file or directory
+nohup: TDA_features_HCP_YA_doing.py: No such file or directory
+nohup: TDA_features_HCP_YA_doing.py: No such file or directory
+0it [00:00, ?it/s]0it [00:00, ?it/s]
+Traceback (most recent call last):
+  File "TDA_features_HCP_YA_doing.py", line 954, in <module>
+    results = list(tqdm.tqdm(pool.imap_unordered(f, files)))
+  File "/Users/boltzmann/anaconda3/lib/python3.8/site-packages/tqdm/std.py", line 1165, in __iter__
+    for obj in iterable:
+  File "/Users/boltzmann/anaconda3/lib/python3.8/site-packages/mpire/pool.py", line 509, in imap_unordered
+    self._start_workers(progress_bar)
+  File "/Users/boltzmann/anaconda3/lib/python3.8/site-packages/mpire/pool.py", line 141, in _start_workers
+    self._worker_comms.init_comms(self.map_params.worker_exit is not None, progress_bar)
+  File "/Users/boltzmann/anaconda3/lib/python3.8/site-packages/mpire/comms.py", line 113, in init_comms
+    self._workers_dead = [self.ctx.Event() for _ in range(self.n_jobs)]
+  File "/Users/boltzmann/anaconda3/lib/python3.8/site-packages/mpire/comms.py", line 113, in <listcomp>
+    self._workers_dead = [self.ctx.Event() for _ in range(self.n_jobs)]
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/context.py", line 93, in Event
+    return Event(ctx=self.get_context())
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/synchronize.py", line 324, in __init__
+    self._cond = ctx.Condition(ctx.Lock())
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/context.py", line 78, in Condition
+    return Condition(lock, ctx=self.get_context())
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/synchronize.py", line 216, in __init__
+    self._wait_semaphore = ctx.Semaphore(0)
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/context.py", line 83, in Semaphore
+    return Semaphore(value, ctx=self.get_context())
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/synchronize.py", line 126, in __init__
+    SemLock.__init__(self, SEMAPHORE, value, SEM_VALUE_MAX, ctx=ctx)
+  File "/Users/boltzmann/anaconda3/lib/python3.8/multiprocessing/synchronize.py", line 57, in __init__
+    sl = self._semlock = _multiprocessing.SemLock(
+OSError: [Errno 24] Too many open files

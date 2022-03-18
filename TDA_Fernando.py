@@ -276,7 +276,7 @@ def densthr(d, i,DIAGNOSTIC=False):
     Parameters
     ---------   
     d: float
-        density value
+        density value between 0 and 1.
         
     i: numpy matrix
         connectivity matrix
