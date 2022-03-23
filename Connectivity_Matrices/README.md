@@ -1,4 +1,4 @@
-Contains all connectivity matrices from the HCP data from the first resting state session. 
+# Contains all connectivity matrices from the HCP data from the first resting state session. 
 
 Correlation_Matrices contains all standard connectivity matrices with Pearson correlation
 Mutual_Information_Matrices contains all connectivity matrices with mutual information scores between regions
