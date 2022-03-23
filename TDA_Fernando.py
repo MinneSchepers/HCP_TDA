@@ -338,7 +338,7 @@ def Eulerange_thr(i, maxvalue):
     return Ec
 
 
-def Eulerange_dens(i, maxvalue):
+def Eulerange_dens(i, maxvalue, resolution):
     """
     Computes the Euler Characteristic and the respective summary metrics for a range of densities
 
@@ -364,7 +364,7 @@ def Eulerange_dens(i, maxvalue):
 
     Ec = []
     for j in range(0, maxvalue):
-        G = densthr(j/1000, i)
+        G = densthr(j/resolution, i)
         Ec.append(Euler_charac(G))
         
     return Ec

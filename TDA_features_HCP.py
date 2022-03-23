@@ -339,7 +339,7 @@ def calculate_ShannonEntropy(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_EulerCharaceristic(matrix, subject, max_density):
+def calculate_EulerCharaceristic(matrix, subject, max_density, Euler_resolution):
     """ Calculates Euler characteristic across a density range
 
     
@@ -347,8 +347,12 @@ def calculate_EulerCharaceristic(matrix, subject, max_density):
     ----------
     matrix: connectivity matrix as numpy array
     subject: name of subject, needed for exporting data
-    max_density: integer which sets the max of the density range for the Euler
-        function
+    max_density: float between 0 and 1 to set the maximum of the density at which 
+        the Euler will be sampled. If 0.1, then the Euler is sampled from 0% 
+        to 10% density. 
+    Euler_resolution: the number of samples to estimate the Euler with. With large
+        connectivity matrix, i.e. from HCP at least 360 regions, use minimal 
+        resolution of 1000. 
     
     
     Returns
@@ -363,7 +367,10 @@ def calculate_EulerCharaceristic(matrix, subject, max_density):
         
     
     """
-    outcomes = TDA_Fernando.Eulerange_dens(matrix, max_density)
+    
+    density_value = max_density * Euler_resolution
+    
+    outcomes = TDA_Fernando.Eulerange_dens(matrix, density_value, Euler_resolution)
 
     Euler = [i[0] for i in outcomes]
     total_cliques = [i[1] for i in outcomes]
@@ -387,11 +394,12 @@ def calculate_curvature(matrix, subject, *args, **kwargs):
     matrix: connectivity matrix as numpy array
     subject: name of subject, needed for exporting data
     args: list of density values at which the sample the curvature values
+        density value of 0.01 means 1%, density value of 0.1 means at 10% density
     kwargs: dictionary with density values which are sampled at 
         (a distance to) a phase transition. This means that each subject 
         will then have a different density value for sampling. 
         Values: density values. Keys: name of density value. E.g. p1: first
-        phase transition, or p2: second phase transition. 
+        phase transition, or p2: second phase transition.
     
     
     Returns
@@ -794,7 +802,7 @@ def calculate_features(subject):
 
     # Calculate Euler characteristic
     (outcomes_to_export, outcomes_to_plot, Euler
-      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler)
+      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 1000)
 
     # Calculate phase transitions and densities located around transitions                                     
     peaks, outcomes_to_export = calculate_Euler_peaks(Euler)
@@ -837,7 +845,7 @@ curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plott
 # curvatures_to_plot = [0.005, 0.01]
 # and calculating curvatures
 # density_Euler = 100 # the maximum density of density range to calculate Euler
-density_Euler = 100
+density_Euler = 0.10 # This means up to 10% density of network
 n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
