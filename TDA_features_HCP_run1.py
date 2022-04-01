@@ -106,7 +106,7 @@ def import_data(path_data):
         data.append(filename)
     
     # Export any already completed subjects in the same file from a previous run
-    if os.stat(path_export+export_filename).st_size != 0:
+    if os.stat(path_export+export_filename).st_size == 0:
         export_data = pd.read_csv(path_export)
         completed_subjects = export_data["Subject"]
         completed_subjects = [i + ".csv" for i in completed_subjects]
@@ -921,7 +921,9 @@ path_train = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Cog_data/Cog_All_train.csv
 # Paths for exporting
 path_export = '/data/KNW/KNW-stage/m.schepers/HCP/Data/TDA_data/'
 path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Plotting_Data/'
-export_filename = 'TDA_testfile2.csv'
+export_filename = 'TDA_train_Euler_resolution100.csv'
+
+
 
 # Set variables
 nr_dimensions = 1 # number of dimensions in filtration process to analyze
@@ -931,21 +933,21 @@ curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plott
 # and calculating curvatures
 density_Euler = 0.02 # This means up to 5% density of network
 Euler_resolution = 1000
-n_workers = 4 # number of cores to run scripts on 
+n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
 FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
 data = import_data(path_data)
-data = ['HCA7552478.csv', 'HCA9546594.csv', 'HCA7056264.csv',
-      'HCA6375275.csv']
+# data = ['HCA7552478.csv', 'HCA9546594.csv', 'HCA7056264.csv',
+#       'HCA6375275.csv']
 
-# train = pd.read_csv(path_train)
-# train_subjects = train['subject']
-# train_subjects = [i + '.csv' for i in train_subjects]
-# only_train = [i for i in data if i in train_subjects]
-# data = only_train
+train = pd.read_csv(path_train)
+train_subjects = train['subject']
+train_subjects = [i + '.csv' for i in train_subjects]
+only_train = [i for i in data if i in train_subjects]
+data = only_train
 
 # Create variables for exporting
 outcomes_to_export = {}
