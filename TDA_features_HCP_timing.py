@@ -27,8 +27,6 @@ __status__ = "Production" ### Production = still being developed. Else: Conclude
 
 # Standard imports 
 import os
-import csv
-from time import time
 
 # Third party imports 
 import gudhi as gd # version 3.3.0
@@ -54,40 +52,9 @@ import TDA_Fernando
 ####################
 # Functions        #
 ####################
-  
-  
-def timer_func(func):
-    """ Can be used as a decorator to a function to measure time it takes to
-    complete a function. To do this, put @timer_func on the line directly 
-    before where the function is defined. 
-
-    
-    Parameters
-    ----------
-    func: the function which is measured. Do not set the parameter, only put
-    @timer_func before where function is defined
-    
-    
-    Returns
-    -------
-    prints name of function and the time it takes to execute in seconds 
-           
-        
-    """
-    
-    # This function shows the execution time of 
-    # the function object passed
-    def wrap_func(*args, **kwargs):
-        t1 = time()
-        result = func(*args, **kwargs)
-        t2 = time()
-        print(f'Function {func.__name__!r} executed in {(t2-t1):.4f}s')
-        return result
-    
-    return wrap_func
 
 
-def import_data(path_data):
+def import_data(path_dir):
     """Makes list of all connectivity matrices to include
     
     
@@ -102,16 +69,8 @@ def import_data(path_data):
         
     """
     data = []
-    for filename in os.listdir(path_data):
+    for filename in os.listdir(path_dir):
         data.append(filename)
-    
-    # Export any already completed subjects in the same file from a previous run
-    if os.stat(path_export+export_filename).st_size == 0:
-        export_data = pd.read_csv(path_export)
-        completed_subjects = export_data["Subject"]
-        completed_subjects = [i + ".csv" for i in completed_subjects]
-        
-        data = [i for i in data if i not in completed_subjects]
 
     return data
 
@@ -151,25 +110,36 @@ def import_cmatrix(path_dir, subject):
     return matrix
 
 
-def export_TDA_data(path_export, export_filename, outcomes_to_export):
-    """ Exports dictionary from single subject as row to csv file 
+def make_df(TDA_features):
+    """ Constructs a dataframe with all TDA features for all subjects 
+    for exporting
     
     
     Parameters
     ----------
-    path_export: the path of the csv file to export to
-    outcomes_to_export: dict with all TDA data from a single subject
+    TDA_features: list with all TDA features for one subject
         
+    
+    Returns
+    -------
+    df_export: pandas dataframe with all subjects as rows and their 
+               corresponding TDA data in columns
         
     """
-    with open(path_export+export_filename, 'a+') as csvfile:  
-        writer = csv.DictWriter(csvfile, fieldnames=outcomes_to_export.keys())    
-        # If file is empty, make row with headers
-        if os.stat(path_export+export_filename).st_size == 0:
-            writer.writeheader()        
-        # Write data as row
-        writer.writerow(outcomes_to_export)
-        
+    
+    df_export = pd.DataFrame()
+
+    # Apppend each index of results as row of df
+    for i in TDA_features:
+        df_export = df_export.append(i, ignore_index=True)
+
+    # Bring subject name forward to first column of dataframe
+    df_columns = df_export.columns.tolist()
+    df_columns.insert(0, df_columns.pop(df_columns.index('Subject')))
+    df_export = df_export.reindex(columns=df_columns)
+
+    return df_export
+
 
 def calculate_persistence(matrix):
     """ Performs filtration (persistent homology) process 
@@ -408,9 +378,10 @@ def calculate_EulerCharaceristic(matrix, subject, max_density, Euler_resolution)
     total_cliques = [i[1] for i in outcomes]
     triangles = [i[5] for i in outcomes]
 
-    outcomes_to_plot[f'Eulerrange_d{max_density}_{subject[:-4]}'] = Euler
+    outcomes_to_plot[f'Eulerrange_d{max_density}_{subject[4:10]}'] = Euler
 
     outcomes_to_export['Euler_sum'] = sum(Euler)
+    outcomes_to_export['Euler_sum_abs'] = sum(abs(Euler))
     outcomes_to_export['total_cliques_sum'] = sum(total_cliques)
     outcomes_to_export['triangles_sum'] = sum(triangles)
 
@@ -455,7 +426,7 @@ def calculate_curvature(matrix, subject, *args, **kwargs):
         # calculate curvature at density value
         curv = TDA_Fernando.Curv_density(dens, matrix)
         # export for plotting
-        outcomes_to_plot[f'curv_d{dens}_{subject[:-4]}'] = curv
+        outcomes_to_plot[f'curv_d{dens}_{subject[4:10]}'] = curv
         # calculate curvature outcomes (mean, sandard deviation, kurtosis, 
         # skewness, entropy) for all nodes, DMN nodes and FPN nodes
         for k, v in dict_to_loop.items():
@@ -636,11 +607,7 @@ def import_subnetworks(path_regions, path_region_names):
 
 
 def export_plotting_data(plotting_data):
-    """ THIS IS AN OLD FUNCTION. Replaced by export_plot_data, which exports
-    the plotting data per subject separately in separate files. Prevents 
-    loss of data when an error occurs. 
-    
-    Exports TDA features for plotting
+    """ Exports TDA features for plotting
     
     
     Parameters
@@ -680,7 +647,6 @@ def export_plotting_data(plotting_data):
         
     # Per feature, make a new dictionary with only data from that feature
     for feature in feature_names:
-        print(feature)
         # Make list with all keys to include in new dictionary. For example: 
         # for curv_d0.05, include curv_d0.005_subject1 and curv_d0.05_subject2
         all_keys = [key for key,value in merged.items() if feature in key]
@@ -688,7 +654,7 @@ def export_plotting_data(plotting_data):
         new_dict = {}
         for i in all_keys:
             new_dict[i] = merged[i]
-        # Export dictionary as npz file
+        # Export dictionary as npz file 
         savez_compressed(f'{path_plots}To_Plot_{feature}.npz', **new_dict)
     
 
@@ -759,84 +725,39 @@ def get_phase_transition_peaks(peaks):
     
         
     """
-    # Define absolute distances to phase transitions
-    distances = {
-        'd1': 0.00015,
-        'd2': 0.0015,
-        'd3': 0.015,
-        'd4': 0.15,
-        }
+    distance_p1 = 0.015
+    distance_p2 = 0.15
     
-    # Make dictionary with phase transition names as keys and densities as
-    # values. Make all values 0. 
     pt_peak = {}
-    for k, v in distances.items(): 
-        pt_peak[f'pt1_{v}_low'] = 0
-        pt_peak[f'pt1_{v}_high'] = 0
-        pt_peak[f'pt2_{v}_low'] = 0
-        pt_peak[f'pt2_{v}_high'] = 0
     
-    # If first phase transition present, change values 
+    # If no phase transitions present:
+    if len(peaks) == 0:
+        peak1_low = 0
+        peak1_high = 0
+        peak2_low = 0
+        peak2_high = 0
+    
+    # If only first phase transition present: 
     if len(peaks) == 1:
-        for k, v in distances.items(): 
-            pt_peak[f'pt1_{v}_low'] = abs(round(float(peaks)/1000 - v, 5))
-            pt_peak[f'pt1_{v}_high'] = abs(round(float(peaks)/1000 + v, 5))
-        
-    # If two phase transitions present, change two values
+        peak1_low = abs(round(float(peaks)/1000 - distance_p1, 5))
+        peak1_high = abs(round(float(peaks)/1000 + distance_p1, 5))
+        peak2_low = 0
+        peak2_high = 0
+    
+    # If also second phase transition present: 
     if len(peaks) > 1:
-        for k, v in distances.items(): 
-            pt_peak[f'pt1_{v}_low'] = abs(round(float(peaks[0])/1000 - v, 5))
-            pt_peak[f'pt1_{v}_high'] = abs(round(float(peaks[0])/1000 + v, 5))
-            pt_peak[f'pt2_{v}_low'] = abs(round(float(peaks[1])/1000 - v, 5))
-            pt_peak[f'pt2_{v}_high'] = abs(round(float(peaks[1])/1000 + v, 5))
+        peak1_low = abs(round(peaks[0]/1000 - distance_p1, 5))
+        peak1_high = abs(round(peaks[0]/1000 + distance_p1, 5))
+        peak2_low = abs(round(peaks[1]/1000 - distance_p2, 5))
+        peak2_high = abs(round(peaks[1]/1000 + distance_p2, 5))
+        
+    pt_peak['p1low'] = peak1_low
+    pt_peak['p1high'] = peak1_high
+    pt_peak['p2low'] = peak2_low
+    pt_peak['p2high'] = peak2_high
 
     return pt_peak
 
-
-def export_plot_data(path_plots, export_filename, outcomes_to_plot):
-    
-    """ Exports data which can be plotted later
-    
-    
-    Parameters
-    ----------
-    path_plots: path to directory with all plotting data
-    export_filename: the name of the final TDA file. Used for naming the
-        directory within the path_plots directory to put all the plotting
-        files in
-    outcomes_to_plot: a dictionary with the feature names as keys (e.g. 
-        curv_d0.01_subject1) and a numpy array or list as value
-        
-    
-    Returns
-    -------
-    Saves the plotting data in separate subfolders as a txt file. For example, 
-    all files named curv_d0.01_subjectx are place in the folder curv_d0.01 with
-    with their original names as file names (so within this folder are 
-    curv_d0.01_subject1.csv and curv_d0.01_subjectx.csv)
-        
-        
-    """
-    
-    # Make directory to put all plotting data 
-    directory_name = export_filename[:-4] # Remove the .csv from filename
-    if not os.path.exists(path_plots+directory_name):
-        os.makedirs(path_plots+directory_name)
-    
-    # Also make subfolders to save data per featre in separate folder
-    for feature, plot_matrix in outcomes_to_plot.items():
-        
-        # Get common feature names. E.g. from curv_d0.01_subject1 to curv_d0.01
-        splitted = feature.split('_')
-        feature_name = f'{splitted[0]}_{splitted[1]}'
-        # If no directory with common feature name, make one
-        path_feature = f'{path_plots}{directory_name}/{feature_name}'
-        if not os.path.exists(path_feature):
-            os.makedirs(path_feature)
-        
-        # Save matrix in subfolder as txt file
-        np.savetxt(f'{path_feature}/{feature}', plot_matrix, delimiter=",")
-        
 
 def calculate_features(subject):
     """ Combines all functions above to calculate TDA features for each subject
@@ -880,8 +801,7 @@ def calculate_features(subject):
 
     # Calculate Euler characteristic
     (outcomes_to_export, outcomes_to_plot, Euler
-      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler,
-                                       Euler_resolution)
+      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 1000)
 
     # Calculate phase transitions and densities located around transitions                                     
     peaks, outcomes_to_export = calculate_Euler_peaks(Euler)
@@ -898,12 +818,8 @@ def calculate_features(subject):
     
     # Add name Subject to dictionary to export
     outcomes_to_export['Subject'] = subject[:-4] 
-    
-    export_TDA_data(path_export, export_filename, outcomes_to_export)
-    export_plot_data(path_plots, export_filename, outcomes_to_plot)
-    
-    return outcomes_to_export, outcomes_to_plot
 
+    return outcomes_to_export, outcomes_to_plot
 
 ####################
 # Run Functions    #
@@ -914,31 +830,30 @@ np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
 path_data = '/data/KNW/KNW-stage/m.schepers/HCP/Connectivity_Matrices/HCP_REST1_conn_mat/'
+path_export = '/data/KNW/KNW-stage/m.schepers/HCP/TDA_data/TDA_features_HCP_training_all.csv'
+path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Plots/Training_all'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
 path_train = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Cog_data/Cog_All_train.csv'
-# Paths for exporting
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/Data/TDA_data/'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Plotting_Data/'
-export_filename = 'TDA_testfile2.csv'
 
 # Set variables
-nr_dimensions = 1 # number of dimensions in filtration process to analyze
+nr_dimensions = 2 # number of dimensions in filtration process to analyze
 resolution = 100 # resolution for calculating area under curve
-# curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plotting
-curvatures_to_plot = [0.005, 0.01]
+curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plotting
+# curvatures_to_plot = [0.005, 0.01]
 # and calculating curvatures
-density_Euler = 0.04 # This means up to 5% density of network
-Euler_resolution = 100
-n_workers = 4 # number of cores to run scripts on 
+density_Euler = 0.05 # This means up to 5% density of network
+n_workers = 10 # number of cores to run scripts on 
 
-# Import subnetworks
-FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
-# Import data
-data = import_data(path_data)
-data = ['HCA7552478.csv', 'HCA9546594.csv', 'HCA7056264.csv',
-      'HCA6375275.csv']
+
+
+# # Import subnetworks
+# FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
+
+# # Import data
+# data = import_data(path_data)
+# # data = data[0:5]
 
 # train = pd.read_csv(path_train)
 # train_subjects = train['subject']
@@ -946,18 +861,48 @@ data = ['HCA7552478.csv', 'HCA9546594.csv', 'HCA7056264.csv',
 # only_train = [i for i in data if i in train_subjects]
 # data = only_train
 
-# Create variables for exporting
+# # Create variables for exporting
 outcomes_to_export = {}
 outcomes_to_plot = {}
 
-# Print basic statistics for keeping progress
-print(f'N = {len(data)}, n_workers = {n_workers}', flush=True)
-print("--- Generating features ---", flush=True)
 
-# Run code, tqdm will show progress bar
-pool = WorkerPool(n_jobs=n_workers)
-results = list(tqdm.tqdm(pool.imap_unordered(calculate_features, data),
-                          total=len(data)))
+import timeit
+data = import_data(path_data)
+FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
+subject = data[0]
+matrix, dist_matrix = preprocess_matrix(path_data, subject)
+time1 = timeit.default_timer()
+(outcomes_to_export, outcomes_to_plot, Euler
+ ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 100)
+time2 = timeit.default_timer()
+print(f'Time for resolution 100: {time2 - time1}')
+(outcomes_to_export, outcomes_to_plot, Euler
+ ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 200)
+time3 = timeit.default_timer()
+print(f'Time for resolution 200: {time3 - time2}')
+(outcomes_to_export, outcomes_to_plot, Euler
+ ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 500)
+time4 = timeit.default_timer()
+print(f'Time for resolution 500: {time4 - time3}')
+(outcomes_to_export, outcomes_to_plot, Euler
+ ) = calculate_EulerCharaceristic(matrix, subject, density_Euler, 1000)
+time5 = timeit.default_timer()
+print(f'Time for resolution 1000: {time5 - time4}')
 
+# # Print basic statistics for keeping progress
+# print(f'N = {len(data)}, n_workers = {n_workers}', flush=True)
+# print("--- Generating features ---", flush=True)
 
+# # Run code, tqdm will show progress bar
+# pool = WorkerPool(n_jobs=n_workers)
+# results = list(tqdm.tqdm(pool.imap_unordered(calculate_features, data),
+#                           total=len(data)))
 
+# # Export plotting data
+# plotting_data = [i[1] for i in results]
+# export_plotting_data(plotting_data)
+
+# # Export TDA features
+# TDA_features = [i[0] for i in results]
+# df_export = make_df(TDA_features)
+# df_export.to_csv(path_export, index=False)
