@@ -8,7 +8,7 @@ We combined all behavioral data files from the HCP project into a single behavio
 - Make_cog_file_HCP.ipynb
 
 # 2 - Split data into exploration/training set and testing set.
-We created two groups, training and validation sets. We performed feature selection in the training data set, and tested our findings in the validation dataset. We splitted the database based on age and on years of education. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann Whitney U test.
+We created two groups, training and validation sets. We performed feature selection in the training data set, and tested our findings in the validation dataset. We splitted the database based on age and on years of education. Data check based on visual inspection of distributions of these variables in both groups, as well as Mann-Whitney-U test.
 
 Files:
 - Split_HCP_data_Females.ipynb
@@ -32,7 +32,7 @@ Connectivity_matrices_MI.py
 Creates mutual information matrices with only significant links
 To be created
 
-# Produce TDA features from correlation matrices:
+# Generate TDA features from correlation matrices:
 Input is correlation matrices, as well as files for the region names and subnetworks. Output is csv file with all TDA features for all persons, and npz files for numpy arrays, which can then be plotted afterwards using the HCP_Data_checking_plotting.ipynb file.
 Files:
 - TDA_features_HCP.py
