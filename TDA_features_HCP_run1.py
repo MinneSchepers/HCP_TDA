@@ -87,31 +87,34 @@ def timer_func(func):
     return wrap_func
 
 
-def import_data(path_data):
+def import_data(path_data, remove_completed):
     """Makes list of all connectivity matrices to include
     
     
     Parameters
     ----------
-    path_dir: path to directory with all connectivity matrices
-        
+    path_dir (str): path to directory with all connectivity matrices
+    remove_completed (bool): remove the already processed subjects from analyses
+    
     
     Returns
     -------
     data: list containing all names of connectivity matrices
         
     """
-    data = []
-    for filename in os.listdir(path_data):
-        data.append(filename)
+    data = os.listdir(path_data)
     
-    # Export any already completed subjects in the same file from a previous run
-    if os.stat(path_export+export_filename).st_size == 0:
-        export_data = pd.read_csv(path_export)
-        completed_subjects = export_data["Subject"]
-        completed_subjects = [i + ".csv" for i in completed_subjects]
-        
-        data = [i for i in data if i not in completed_subjects]
+    if remove_completed == True:
+        # Export any already completed subjects in the same file from a previous run
+        # Make file if file does not exist
+        open(path_export+export_filename, 'a+')
+        # If file is not empty: remove completed subjects from data
+        if os.stat(path_export+export_filename).st_size != 0:
+            export_data = pd.read_csv(path_export+export_filename)
+            completed_subjects = export_data["Subject"]
+            completed_subjects = [i + ".csv" for i in completed_subjects]
+            
+            data = [i for i in data if i not in completed_subjects]
 
     return data
 
@@ -122,13 +125,13 @@ def import_cmatrix(path_dir, subject):
     
     Parameters
     ----------
-    path_dir: path to directory with all connectivity matrices
-    subject: a single subject from the data-list
+    path_dir (str): path to directory with all connectivity matrices
+    subject  (str): a single subject from the data-list
     
     
     Returns
     -------
-    matrix: connectivity matrix as numpy array
+    matrix (numpy.array): connectivity matrix as numpy array
         
     
     Notes
@@ -157,9 +160,14 @@ def export_TDA_data(path_export, export_filename, outcomes_to_export):
     
     Parameters
     ----------
-    path_export: the path of the csv file to export to
-    outcomes_to_export: dict with all TDA data from a single subject
-        
+    path_export (str): the path of the csv file to export to
+    outcomes_to_export (dict): dict with all TDA data from a single subject
+    
+    Notes
+    -----------
+    If a file with the same name already exists due to a previous run, 
+    the new data is added to this file. Does not overwrite. 
+    
         
     """
     with open(path_export+export_filename, 'a+') as csvfile:  
@@ -177,7 +185,7 @@ def calculate_persistence(matrix):
     
     Parameters
     ----------
-    matrix: connectivity matrix as numpy array
+    matrix (numpy.array): connectivity matrix as numpy array
         
     
     Returns
@@ -249,21 +257,22 @@ def persistence_per_dim(simplex_tree, nr_dimension):
     return pers_per_dim
 
 
-def calculate_betti_curves(pers_per_dim):
+def betti_curves(pers_per_dim):
     """ Calculates Betti curves per dimension
 
     
     Parameters
     ----------
-    pers_per_dim: list of persistence per dimension
+    pers_per_dim (list): list of persistence per dimension
         
     
     Returns
     -------
-    outcomes_to_export: dictionary with all TDA outcomes per subject. 
-        bc_AUC_dim: the area under the curve for the betti curve per 
-            dimension. 
-        bc_max_dim: the maximum of the betti curve per dimension. 
+    outcomes_to_export (dict): dictionary with all TDA outcomes per subject. 
+        keys:    
+        bc_AUC_dim#: the area under the curve for the betti curve per 
+            dimension, where # is the number of dimensions
+        bc_max_dim#: the maximum of the betti curve per dimension. 
          
         
     """
@@ -283,13 +292,13 @@ def calculate_betti_curves(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_persistence_landscape(pers_per_dim):
+def persistence_landscape(pers_per_dim):
     """ Calculates persistence landscape per dimension
 
     
     Parameters
     ----------
-    pers_per_dim: list of persistence per dimension
+    pers_per_dim(list): list of persistence per dimension
         
     
     Returns
@@ -312,13 +321,13 @@ def calculate_persistence_landscape(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_TopologicalVector(pers_per_dim):
+def topological_vector(pers_per_dim):
     """ Calculates topological vector per dimension
 
     
     Parameters
     ----------
-    pers_per_dim: list of persistence per dimension
+    pers_per_dim (list): list of persistence per dimension
     
     Returns
     -------
@@ -340,7 +349,7 @@ def calculate_TopologicalVector(pers_per_dim):
     return outcomes_to_export
 
 
-def calculate_ShannonEntropy(pers_per_dim):
+def shannon_entropy(pers_per_dim):
     """ Calculates Shannon entropy per dimension
 
     
@@ -370,31 +379,34 @@ def calculate_ShannonEntropy(pers_per_dim):
 
 
 @timer_func
-def calculate_EulerCharaceristic(matrix, subject, max_density, Euler_resolution):
+def euler_characeristic(matrix, subject, max_density, 
+                                 Euler_resolution, k_max):
     """ Calculates Euler characteristic across a density range
 
     
     Parameters
     ----------
-    matrix: connectivity matrix as numpy array
-    subject: name of subject, needed for exporting data
-    max_density: float between 0 and 1 to set the maximum of the density at which 
+    matrix (numpy.array): connectivity matrix as numpy array
+    subject (str): name of subject, needed for exporting data
+    max_density (float): float between 0 and 1 to set the maximum of the density at which 
         the Euler will be sampled. If 0.1, then the Euler is sampled from 0% 
         to 10% density. 
-    Euler_resolution: the number of samples to estimate the Euler with. With large
+    Euler_resolution (int): the number of samples to estimate the Euler with. With large
         connectivity matrix, i.e. from HCP at least 360 regions, use minimal 
-        resolution of 1000. 
+        resolution of 1000.
+    k_max (int): the maximum number of k-cliques to calculate. Lower values lowers
+        computation time. 
     
     
     Returns
     -------
-    outcomes_to_export: dictionary with all TDA outcomes per subject. 
+    outcomes_to_export (dict): dictionary with all TDA outcomes per subject. 
          The sum of the Euler characteristic per subject, the total number of 
          cliques and total number of triangles are added as a column
          per subject
-    outcomes_to_plot: dictionary with outcomes to be exported which can be 
+    outcomes_to_plot (dict): dictionary with outcomes to be exported which can be 
         plotted later using a Jupyter Notebook. 
-    Euler: list of all Euler values across the density range 
+    Euler (list): list of all Euler values across the density range 
         
     
     """
@@ -403,7 +415,7 @@ def calculate_EulerCharaceristic(matrix, subject, max_density, Euler_resolution)
     density_value = int(max_density * Euler_resolution)
     
     outcomes = TDA_Fernando.Eulerange_dens(matrix, density_value, 
-                                           Euler_resolution)
+                                           Euler_resolution, k_max)
 
     Euler = [i[0] for i in outcomes]
     total_cliques = [i[1] for i in outcomes]
@@ -417,15 +429,15 @@ def calculate_EulerCharaceristic(matrix, subject, max_density, Euler_resolution)
 
     return outcomes_to_export, outcomes_to_plot, Euler
 
-
-def calculate_curvature(matrix, subject, *args, **kwargs):
+@timer_func
+def curvature(matrix, subject, *args, **kwargs):
     """ Calculates node curvatures at certain density values
 
     
     Parameters
     ----------
-    matrix: connectivity matrix as numpy array
-    subject: name of subject, needed for exporting data
+    matrix (numpy.array): connectivity matrix as numpy array
+    subject (str): name of subject, needed for exporting data
     args: list of density values at which the sample the curvature values
         density value of 0.01 means 1%, density value of 0.1 means at 10% density
     kwargs: dictionary with density values which are sampled at 
@@ -479,7 +491,7 @@ def calculate_curvature(matrix, subject, *args, **kwargs):
     return outcomes_to_export, outcomes_to_plot
 
 
-def calculate_cliques(matrix, clique_nr, *args, **kwargs):
+def participation_cliques(matrix, clique_nr, *args, **kwargs):
     """ Calculates participation for DMN and FPN in n-cliques
     at chosen density values
 
@@ -693,7 +705,7 @@ def export_plotting_data(plotting_data):
         savez_compressed(f'{path_plots}To_Plot_{feature}.npz', **new_dict)
     
 
-def calculate_Euler_peaks(Euler):
+def euler_peaks(Euler):
     """ Calculates the position of the Euler peaks / phase transitions
     
     
@@ -734,7 +746,7 @@ def calculate_Euler_peaks(Euler):
     return peaks, outcomes_to_export
 
 
-def get_phase_transition_peaks(peaks):
+def phase_transition_densities(peaks):
     """ Calculates values of densities located around phase transition
 
     
@@ -764,8 +776,7 @@ def get_phase_transition_peaks(peaks):
     distances = {
         'd1': 0.00015,
         'd2': 0.0015,
-        'd3': 0.015,
-        'd4': 0.15,
+        'd3': 0.015
         }
     
     # Make dictionary with phase transition names as keys and densities as
@@ -826,18 +837,17 @@ def export_plot_data(path_plots, export_filename, outcomes_to_plot):
     
     # Also make subfolders to save data per featre in separate folder
     for feature, plot_matrix in outcomes_to_plot.items():
-        
         # Get common feature names. E.g. from curv_d0.01_subject1 to curv_d0.01
         splitted = feature.split('_')
         feature_name = f'{splitted[0]}_{splitted[1]}'
         # If no directory with common feature name, make one
         path_feature = f'{path_plots}{directory_name}/{feature_name}'
-        if not os.path.exists(path_feature):
-            os.makedirs(path_feature)
-        
+        if not os.path.isdir(path_feature):
+            os.makedirs(path_feature, exist_ok=True)
+
         # Save matrix in subfolder as txt file
-        np.savetxt(f'{path_feature}/{feature}', plot_matrix, delimiter=",")
-        
+        np.savetxt(f'{path_feature}/{feature}.csv', plot_matrix, delimiter=",")
+
 
 def calculate_features(subject):
     """ Combines all functions above to calculate TDA features for each subject
@@ -865,37 +875,62 @@ def calculate_features(subject):
     
     
     """
-
+    # print(subject)
     # Import and preproces connectivity matrix
     matrix, dist_matrix = preprocess_matrix(path_data, subject)
 
     # Perform persistence and persistence per dimension
-    # pers, simplex_tree = calculate_persistence(dist_matrix)
-    # pers_per_dim = persistence_per_dim(simplex_tree, nr_dimensions)
+    pers, simplex_tree = calculate_persistence(dist_matrix)
+    pers_per_dim = persistence_per_dim(simplex_tree, nr_dimensions)
     
-    # # Calculate Gudhi TDA outcomes
-    # outcomes_to_export = calculate_betti_curves(pers_per_dim)
-    # outcomes_to_export = calculate_persistence_landscape(pers_per_dim)
-    # outcomes_to_export = calculate_TopologicalVector(pers_per_dim)
-    # outcomes_to_export = calculate_ShannonEntropy(pers_per_dim)
+    # Calculate Gudhi TDA outcomes
+    outcomes_to_export = betti_curves(pers_per_dim)
+    outcomes_to_export = persistence_landscape(pers_per_dim)
+    outcomes_to_export = topological_vector(pers_per_dim)
+    outcomes_to_export = shannon_entropy(pers_per_dim)
+    
 
+
+    ##### Calculate noise-related features
     # Calculate Euler characteristic
     (outcomes_to_export, outcomes_to_plot, Euler
-      ) = calculate_EulerCharaceristic(matrix, subject, density_Euler,
-                                       Euler_resolution)
-
+      ) = euler_characeristic(dist_matrix, subject, max_density=0.10,
+                                       Euler_resolution=500, k_max=15)
+                              
     # Calculate phase transitions and densities located around transitions                                     
-    # peaks, outcomes_to_export = calculate_Euler_peaks(Euler)
-    # pt_peak = get_phase_transition_peaks(peaks)
+    peaks, outcomes_to_export = euler_peaks(Euler)
+    pt_peak = phase_transition_densities(peaks)
+    
+    (outcomes_to_export, outcomes_to_plot
+      ) = curvature(dist_matrix, subject, *curvatures_to_plot)
+    # Calculate and save curvatures
+
+    (outcomes_to_export, outcomes_to_plot
+      ) = curvature(dist_matrix, subject, **pt_peak)
+    
+    # Calculate and save participation in 3-cliques
+    outcomes_to_export = participation_cliques(dist_matrix, 3, **pt_peak)
+    # Calculate and save participation in 4-cliques
+    outcomes_to_export = participation_cliques(dist_matrix, 4, **pt_peak)
+    
+    ##### Calculate noise-related features
+    # Calculate Euler characteristic
+    # (outcomes_to_export, outcomes_to_plot, Euler
+    #   ) = euler_characeristic(matrix, subject, max_density=0.50,
+    #                                    Euler_resolution=100, k_max=10)
+                              
+    # Calculate phase transitions and densities located around transitions                                     
+    # peaks, outcomes_to_export = euler_peaks(Euler)
+    # pt_peak = phase_transition_densities(peaks)
     
     # # Calculate and save curvatures
     # (outcomes_to_export, outcomes_to_plot
-    #   ) = calculate_curvature(matrix, subject, *curvatures_to_plot, **pt_peak)
+    #   ) = curvature(matrix, subject, *curvatures_to_plot,**pt_peak)
     
     # # Calculate and save participation in 3-cliques
-    # outcomes_to_export = calculate_cliques(matrix, 3, **pt_peak)
+    # outcomes_to_export = participation_cliques(matrix, 3, **pt_peak)
     # # Calculate and save participation in 4-cliques
-    # outcomes_to_export = calculate_cliques(matrix, 4, **pt_peak)
+    # outcomes_to_export = participation_cliques(matrix, 4, **pt_peak)
     
     # Add name Subject to dictionary to export
     outcomes_to_export['Subject'] = subject[:-4] 
@@ -914,40 +949,39 @@ def calculate_features(subject):
 np.seterr(divide='ignore', invalid='ignore')
 
 # Specify paths
-path_data = '/data/KNW/KNW-stage/m.schepers/HCP/Connectivity_Matrices/HCP_REST1_conn_mat/'
+path_data = '/mnt/resource/m.schepers/Connectivity_Matrices/HCP_REST1_conn_mat/'
 path_regions = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_region_names_full.txt'
 path_region_names = '/data/KNW/f.tijhuis/Atlases_CIFTI/Glasser/Cortical+Freesurfer/GlasserFreesurfer_subnet_order_names.txt'
-path_train = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Cog_data/Cog_All_train.csv'
+path_test = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Cog_data/Cog_All_test.csv'
 # Paths for exporting
-path_export = '/data/KNW/KNW-stage/m.schepers/HCP/Data/TDA_data/'
-path_plots = '/data/KNW/KNW-stage/m.schepers/HCP/Data/Plotting_Data/'
-export_filename = 'TDA_train_Euler_resolution100.csv'
-
-
+path_export = '/mnt/resource/b.maciel/minne_code_review/'
+path_plots = '/mnt/resource/b.maciel/minne_code_review/plotting/'
+export_filename = 'Test_data_run_review.csv'
 
 # Set variables
-nr_dimensions = 1 # number of dimensions in filtration process to analyze
+nr_dimensions = 2 # number of dimensions in filtration process to analyze
 resolution = 100 # resolution for calculating area under curve
 curvatures_to_plot = [0.005, 0.01, 0.02, 0.05, 0.10] # fixed densities for plotting
 # curvatures_to_plot = [0.005, 0.01]
 # and calculating curvatures
-density_Euler = 0.02 # This means up to 5% density of network
-Euler_resolution = 1000
+density_Euler = 0.10 # In percentage, e.g. 0.10 means 10% density
+Euler_resolution = 100
 n_workers = 10 # number of cores to run scripts on 
 
 # Import subnetworks
 FPN, DMN, subcortical = import_subnetworks(path_regions, path_region_names)
 
 # Import data
-data = import_data(path_data)
+data = import_data(path_data, remove_completed=True)
 # data = ['HCA7552478.csv', 'HCA9546594.csv', 'HCA7056264.csv',
 #       'HCA6375275.csv']
+# data = ['HCA7552478.csv']
 
-train = pd.read_csv(path_train)
-train_subjects = train['subject']
-train_subjects = [i + '.csv' for i in train_subjects]
-only_train = [i for i in data if i in train_subjects]
-data = only_train
+test = pd.read_csv(path_test)
+test_subjects = test['subject']
+test_subjects = [i + '.csv' for i in test_subjects]
+only_test = [i for i in data if i in test_subjects]
+data = only_test
 
 # Create variables for exporting
 outcomes_to_export = {}
@@ -962,5 +996,6 @@ pool = WorkerPool(n_jobs=n_workers)
 results = list(tqdm.tqdm(pool.imap_unordered(calculate_features, data),
                           total=len(data)))
 
+plot_data = [i[1] for i in results] 
 
 
