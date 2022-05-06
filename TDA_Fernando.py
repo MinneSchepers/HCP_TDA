@@ -40,7 +40,8 @@ import scipy.special
 #niceValue = os.nice(10)
 
 #You can set up the maximum clique size for your analysis.
-kmax=30 # dimensions - max size for the clique algorithm
+kmax=15 # dimensions - max size for the clique algorithm
+# now 10, was 30
 
 # Define Functions ------------------------------------------------------------
 
@@ -338,7 +339,7 @@ def Eulerange_thr(i, maxvalue):
     return Ec
 
 
-def Eulerange_dens(i, maxvalue, resolution):
+def Eulerange_dens(i, maxvalue, resolution, k_max):
     """
     Computes the Euler Characteristic and the respective summary metrics for a range of densities
 
@@ -365,7 +366,7 @@ def Eulerange_dens(i, maxvalue, resolution):
     Ec = []
     for j in range(0, maxvalue):
         G = densthr(j/resolution, i)
-        Ec.append(Euler_charac(G))
+        Ec.append(Euler_charac(G, kmax=k_max))
         
     return Ec
 
