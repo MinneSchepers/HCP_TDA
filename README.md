@@ -1,6 +1,7 @@
 # HCP_TDA
 
-This repository contains code for topological analysis of HCP data. This readme contains, step by step, the codes we used for our project. We focused on the HCP aging database. 
+This repository contains code for topological analysis of HCP data. This readme contains, step by step, the codes we used for our project. The codes are still under construction. 
+We focused on the HCP aging database. 
 
 # 1 - Create file for cognitive/behavioral data
 We combined all behavioral data files from the HCP project into a single behavioral data file:
